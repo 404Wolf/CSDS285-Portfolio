@@ -1,0 +1,91 @@
+<html>
+    <script type="text/javascript">
+        const url = "http://149.28.40.6:5000/find-rooms"
+
+        function getRoomURL(duration_hours, hours_from_now) {
+            const params = {
+                duration_hours: duration_hours,
+                hours_from_now: hours_from_now
+            };
+            const queryString = Object.keys(params).map(key => key + '=' + params[key]).join('&');
+            return url + '?' + queryString
+        }
+
+        function findRooms(duration_hours, hours_from_now) {
+            const path = getRoomURL(duration_hours, hours_from_now)
+
+            return fetch(path, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(resp => resp.json())
+        }
+
+        function parseFoundRooms(rooms) {
+            rooms = rooms['rooms'];
+            rooms = rooms.sort((a, b) => a.building_code > b.building_code ? 1 : -1);
+            return rooms.map(room => room.building_code + " " + room.room_code).join("&#10;");
+        }
+
+        function displayResults(results) {
+            const resultsBox = document.getElementById('results-box');
+            resultsBox.innerHTML = results;
+        }
+        
+        function onGetResultsClick() {
+            // Get the form values
+            const duration_hours = document.getElementById('duration_hours').value;
+            const hours_from_now = document.getElementById('hours_from_now').value;
+
+            // Run the query
+            findRooms(duration_hours, hours_from_now)
+                .then(results => parseFoundRooms(results))
+                .then(displayResults);
+            document.getElementById('results-url').href = getRoomURL(duration_hours, hours_from_now);
+
+            // Update the results area header
+            document.getElementById('results-area-head').innerHTML = (
+                "Results for "
+                + duration_hours
+                + " hours from now, for "
+                + hours_from_now
+                + " hours"
+            );
+            document.getElementById('results-box').innerHTML = "Loading...";
+            document.getElementById('hours_from_now').value = "";
+        }
+    </script>
+
+    <head>
+        <title>Room Finder</title>
+    </head>
+
+    <body>
+        <!-- Header -->
+        <h1 style="text-align: center;">Room Finder</h1>
+        <h2 style="text-align: center;">Find an unbooked CWRU room</h2>
+            
+        <!-- Form area -->
+        <div style="display: flex; justify-content: space-between;">
+            <div>
+                <label for="duration_hours">Duration in hours</label>
+                <input type="number" id="duration_hours" placeholder="Duration in hours" value="0">
+            </div>
+
+            <div>
+                <label for="hours_from_now">Hours from now</label>
+                <input type="number" id="hours_from_now" placeholder="Hours from now" value="6">
+            </div>
+
+            <button onclick="onGetResultsClick()">Find a room</button>
+        </div>
+
+        <!-- Results area -->
+        <div>
+            <a id="results-url"><h3 id="results-area-head">Results Area</h3></a>
+            <textarea readonly style="width: 100%; min-height: 40vh;" id="results-box">
+Results will appear here
+            </textarea>
+        </div>
+    </body>
+</html>
